@@ -36,6 +36,7 @@ import org.apache.calcite.linq4j.tree.NewExpression;
 import org.apache.calcite.linq4j.tree.OptimizeShuttle;
 import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.linq4j.tree.Primitive;
+import org.apache.calcite.linq4j.tree.Types;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
@@ -302,6 +303,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ASCII;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ASIN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ATAN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ATAN2;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AVG;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BIT_AND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BIT_OR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BIT_XOR;
@@ -1026,6 +1028,7 @@ public class RexImpTable {
       aggMap.put(REGR_COUNT, constructorSupplier(CountImplementor.class));
       aggMap.put(SUM0, constructorSupplier(SumImplementor.class));
       aggMap.put(SUM, constructorSupplier(SumImplementor.class));
+      aggMap.put(AVG, constructorSupplier(AvgImplementor.class));
       Supplier<MinMaxImplementor> minMax =
           constructorSupplier(MinMaxImplementor.class);
       aggMap.put(MIN, minMax);
@@ -1473,6 +1476,57 @@ public class RexImpTable {
     @Override public Expression implementNotNullResult(AggContext info,
         AggResultContext result) {
       return super.implementNotNullResult(info, result);
+    }
+  }
+
+  /**
+   * Implementor for the {@code AVG} aggregate function.
+   */
+  static class AvgImplementor implements AggImplementor {
+
+    public List<Type> getStateType(AggContext info) {
+      return ImmutableList.of(double.class, double.class);
+    }
+
+    public void implementReset(AggContext info, AggResetContext reset) {
+      reset.currentBlock();
+      Expression sum = reset.accumulator().get(0);
+      Expression count = reset.accumulator().get(1);
+      reset.currentBlock().add(
+          Expressions.statement(
+              Expressions.assign(sum, Expressions.constant(0.0d))));
+
+      reset.currentBlock().add(
+          Expressions.statement(
+              Expressions.assign(count, Expressions.constant(0.0d))));
+    }
+
+    public void implementAdd(AggContext info, AggAddContext add) {
+      Expression sumAcc = add.accumulator().get(0);
+      Expression sumNext;
+      if (add.arguments().get(0).type == BigDecimal.class) {
+        sumNext =  Expressions.add(sumAcc,
+            Expressions.call(add.arguments().get(0), "doubleValue"));
+      } else {
+        sumNext = Expressions.add(sumAcc,
+            Types.castIfNecessary(sumAcc.type, add.arguments().get(0)));
+      }
+      add.currentBlock().add(
+          Expressions.statement(
+              Expressions.assign(sumAcc, sumNext)));
+
+      Expression countAcc = add.accumulator().get(1);
+      Expression countNext = Expressions.add(countAcc,  Expressions.constant(1.0d));
+      add.currentBlock().add(
+          Expressions.statement(
+              Expressions.assign(countAcc, countNext)));
+    }
+
+    public Expression implementResult(AggContext info,
+        AggResultContext result) {
+      Expression sum = result.accumulator().get(0);
+      Expression count = result.accumulator().get(1);
+      return Expressions.divide(sum, count);
     }
   }
 

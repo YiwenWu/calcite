@@ -131,6 +131,23 @@ class SparkAdapterTest {
         .explainContains(plan);
   }
 
+  @Test void testGroupBy2() {
+    final String sql = "select avg(x) as AVG_X \n"
+        + "from " + VALUES2 + "\n"
+        + "group by x";
+//    sql = "select avg(x) as AVG_X \n"
+//        + "from " + VALUES2 + "\n"
+    final String plan = "PLAN=EnumerableAggregate(group=[{0}])\n  "
+        + "EnumerableValues(tuples=[[{ 1, 'a' }, { 2, 'b' }, { 1, 'b' }, { 2, 'c' }, { 2, 'c' }]])\n";
+
+    final String[] expectedResult = {
+        "AVG_X=1",
+        "AVG_X=2"
+    };
+    sql(sql).returnsUnordered(expectedResult)
+        .explainContains(plan);
+  }
+
   @Test void testAggFuncNoGroupBy() {
     final String sql = "select sum(x) as SUM_X, min(y) as MIN_Y, max(y) as MAX_Y, "
         + "count(*) as CNT_Y, count(distinct y) as CNT_DIST_Y\n"
