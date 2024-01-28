@@ -9660,6 +9660,9 @@ public class SqlOperatorTest {
     final SqlOperatorFixture f = fixture();
     f.setFor(SqlLibraryOperators.IFNULL, VmName.EXPAND);
     checkNvl(f, FunctionAlias.of(SqlLibraryOperators.IFNULL));
+    
+    f.withLibrary(SqlLibrary.SPARK);
+    checkNvl(f, FunctionAlias.of(SqlLibraryOperators.IFNULL));
   }
 
   @Test void testNvlFunc() {
@@ -9676,6 +9679,11 @@ public class SqlOperatorTest {
         "VARCHAR(20) NOT NULL");
     f12.checkNull("nvl(CAST(NULL AS VARCHAR(6)), cast(NULL AS VARCHAR(4)))");
     checkNvl(f, FunctionAlias.of(SqlLibraryOperators.NVL));
+
+    final SqlOperatorFixture f2 = fixture().
+        setFor(SqlLibraryOperators.NVL, VmName.EXPAND)
+        .withLibrary(SqlLibrary.SPARK);
+    checkNvl(f2, FunctionAlias.of(SqlLibraryOperators.NVL));
   }
 
   /** Tests the {@code NVL} and {@code IFNULL} operators. */
@@ -9701,6 +9709,7 @@ public class SqlOperatorTest {
 
   @Test void testDecodeFunc() {
     checkDecodeFunc(fixture().withLibrary(SqlLibrary.ORACLE));
+    checkDecodeFunc(fixture().withLibrary(SqlLibrary.SPARK));
   }
 
   private static void checkDecodeFunc(SqlOperatorFixture f) {
@@ -12083,7 +12092,7 @@ public class SqlOperatorTest {
             + "DATE_ADD\\(<DATE>, <INTERVAL_DAY_TIME>\\)", false);
 
     final SqlOperatorFixture f = f0.withLibrary(SqlLibrary.BIG_QUERY);
-    f.checkScalar("date_add(date '2016-02-22', interval 2 day)",
+    f.checkScalar("date_add(date '2016-02-22', 2)",
         "2016-02-24",
         "DATE NOT NULL");
     f.checkScalar("date_add(date '2016-02-17', interval 1 week)",

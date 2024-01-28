@@ -77,10 +77,12 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSpecialOperator;
+import org.apache.calcite.sql.fun.SqlLibrary;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.parser.impl.SqlParserImpl;
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config;
+import org.apache.calcite.test.CalciteAssert.AssertThat;
 import org.apache.calcite.test.schemata.catchall.CatchallSchema;
 import org.apache.calcite.test.schemata.foodmart.FoodmartSchema;
 import org.apache.calcite.test.schemata.hr.Department;
@@ -8299,6 +8301,26 @@ public class JdbcTest {
             throw new RuntimeException(e);
           }
         });
+  }
+
+  @Test void testDecode() {
+    checkDecode(SqlLibrary.ORACLE.fun);
+    checkDecode(SqlLibrary.SPARK.fun);
+  }
+
+  void checkDecode(String library) {
+    AssertThat with = CalciteAssert.that(CalciteAssert.Config.REGULAR)
+        .with(CalciteConnectionProperty.FUN, library);
+    with.query("select decode(0, 0, 'a', 1, 'b', 2, 'c')")
+        .returnsUnordered("EXPR$0=a");
+    with.query("select decode(1, 0, 'a', 1, 'b', 2, 'c')")
+        .returnsUnordered("EXPR$0=b");
+    with.query("select decode(1, 0, 'a', 1, 'b', 1, 'z', 2, 'c')")
+        .returnsUnordered("EXPR$0=b");
+    with.query("select decode(3, 0, 'a', 1, 'b', 2, 'c', 'd')")
+        .returnsUnordered("EXPR$0=d");
+    with.query("select decode(3, 0, 'a', 1, 'b', 2, 'c')")
+        .returnsUnordered("EXPR$0=null");
   }
 
   private static String sums(int n, boolean c) {
