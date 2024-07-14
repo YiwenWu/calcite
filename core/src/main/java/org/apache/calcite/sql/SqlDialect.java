@@ -43,6 +43,8 @@ import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.util.format.FormatModel;
 import org.apache.calcite.util.format.FormatModels;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 
@@ -157,6 +159,7 @@ public class SqlDialect {
   private final Casing unquotedCasing;
   private final Casing quotedCasing;
   private final boolean caseSensitive;
+  private final boolean literalUnescaped;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -241,6 +244,7 @@ public class SqlDialect {
     this.unquotedCasing = requireNonNull(context.unquotedCasing());
     this.quotedCasing = requireNonNull(context.quotedCasing());
     this.caseSensitive = context.caseSensitive();
+    this.literalUnescaped = context.literalUnescaped();
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -251,7 +255,7 @@ public class SqlDialect {
         "'", "''", null, null,
         Casing.UNCHANGED, Casing.TO_UPPER, true, SqlConformanceEnum.DEFAULT,
         NullCollation.HIGH, RelDataTypeSystemImpl.DEFAULT,
-        JethroDataSqlDialect.JethroInfo.EMPTY);
+        JethroDataSqlDialect.JethroInfo.EMPTY, false);
   }
 
   /**
@@ -438,7 +442,11 @@ public class SqlDialect {
       buf.append(charsetName);
     }
     buf.append(literalQuoteString);
-    buf.append(val.replace(literalEndQuoteString, literalEscapedQuote));
+    String replaced = val.replace(literalEndQuoteString, literalEscapedQuote);
+    if (literalUnescaped) {
+      replaced = StringEscapeUtils.escapeJava(replaced);
+    }
+    buf.append(replaced);
     buf.append(literalEndQuoteString);
   }
 
@@ -1486,6 +1494,8 @@ public class SqlDialect {
     Context withDataTypeSystem(RelDataTypeSystem dataTypeSystem);
     JethroDataSqlDialect.JethroInfo jethroInfo();
     Context withJethroInfo(JethroDataSqlDialect.JethroInfo jethroInfo);
+    boolean literalUnescaped();
+    Context withLiteralUnescaped(boolean literalUnescaped);
   }
 
   /** Implementation of Context. */
@@ -1506,6 +1516,7 @@ public class SqlDialect {
     private final NullCollation nullCollation;
     private final RelDataTypeSystem dataTypeSystem;
     private final JethroDataSqlDialect.JethroInfo jethroInfo;
+    private final boolean literalUnescaped;
 
     private ContextImpl(DatabaseProduct databaseProduct,
         @Nullable String databaseProductName, @Nullable String databaseVersion,
@@ -1516,7 +1527,8 @@ public class SqlDialect {
         Casing quotedCasing, Casing unquotedCasing, boolean caseSensitive,
         SqlConformance conformance, NullCollation nullCollation,
         RelDataTypeSystem dataTypeSystem,
-        JethroDataSqlDialect.JethroInfo jethroInfo) {
+        JethroDataSqlDialect.JethroInfo jethroInfo,
+        boolean literalUnescaped) {
       this.databaseProduct = requireNonNull(databaseProduct, "databaseProduct");
       this.databaseProductName = databaseProductName;
       this.databaseVersion = databaseVersion;
@@ -1533,6 +1545,7 @@ public class SqlDialect {
       this.nullCollation = requireNonNull(nullCollation, "nullCollation");
       this.dataTypeSystem = requireNonNull(dataTypeSystem, "dataTypeSystem");
       this.jethroInfo = requireNonNull(jethroInfo, "jethroInfo");
+      this.literalUnescaped = literalUnescaped;
     }
 
     @Override public DatabaseProduct databaseProduct() {
@@ -1546,7 +1559,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public @Nullable String databaseProductName() {
@@ -1559,7 +1572,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public @Nullable String databaseVersion() {
@@ -1572,7 +1585,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public int databaseMajorVersion() {
@@ -1585,7 +1598,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public int databaseMinorVersion() {
@@ -1598,7 +1611,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public String literalQuoteString() {
@@ -1611,7 +1624,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public String literalEscapedQuoteString() {
@@ -1625,7 +1638,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public @Nullable String identifierQuoteString() {
@@ -1639,7 +1652,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public @Nullable String identifierEscapedQuoteString() {
@@ -1653,7 +1666,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public Casing unquotedCasing() {
@@ -1666,7 +1679,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public Casing quotedCasing() {
@@ -1679,7 +1692,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public boolean caseSensitive() {
@@ -1692,7 +1705,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public SqlConformance conformance() {
@@ -1705,7 +1718,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public NullCollation nullCollation() {
@@ -1719,7 +1732,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public RelDataTypeSystem dataTypeSystem() {
@@ -1732,7 +1745,7 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
 
     @Override public JethroDataSqlDialect.JethroInfo jethroInfo() {
@@ -1745,7 +1758,20 @@ public class SqlDialect {
           literalQuoteString, literalEscapedQuoteString,
           identifierQuoteString, identifierEscapedQuoteString,
           quotedCasing, unquotedCasing, caseSensitive,
-          conformance, nullCollation, dataTypeSystem, jethroInfo);
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
+    }
+
+    @Override public boolean literalUnescaped() {
+      return literalUnescaped;
+    }
+
+    @Override public Context withLiteralUnescaped(boolean literalUnescaped) {
+      return new ContextImpl(databaseProduct, databaseProductName,
+          databaseVersion, databaseMajorVersion, databaseMinorVersion,
+          literalQuoteString, literalEscapedQuoteString,
+          identifierQuoteString, identifierEscapedQuoteString,
+          quotedCasing, unquotedCasing, caseSensitive,
+          conformance, nullCollation, dataTypeSystem, jethroInfo, literalUnescaped);
     }
   }
 }

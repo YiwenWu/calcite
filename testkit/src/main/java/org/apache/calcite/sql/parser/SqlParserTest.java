@@ -9346,6 +9346,12 @@ public class SqlParserTest {
         .fails(errorMessage2);
   }
 
+  @Test public void testEscape() {
+    String sql = "SELECT REGEXP_LIKE('%SystemDrive%\\Users\\John', '%SystemDrive%\\\\Users.*')";
+    sql(sql)
+        .ok("SELECT `REGEXP_LIKE`('%SystemDrive%UsersJohn', '%SystemDrive%\\\\Users.*')");
+  }
+
   protected static String varToStr(Hoist.Variable v) {
     if (v.node instanceof SqlLiteral) {
       SqlLiteral literal = (SqlLiteral) v.node;

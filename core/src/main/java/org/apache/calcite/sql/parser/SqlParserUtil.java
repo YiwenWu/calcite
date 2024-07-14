@@ -52,6 +52,8 @@ import org.apache.calcite.util.TimestampWithTimeZoneString;
 import org.apache.calcite.util.Util;
 import org.apache.calcite.util.trace.CalciteTrace;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 import com.google.common.collect.ImmutableList;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -121,6 +123,11 @@ public final class SqlParserUtil {
       s = s.substring(i);
     }
     return strip(s, "'", "'", "''", Casing.UNCHANGED);
+  }
+
+  public static String parseString(String s, boolean unescape) {
+    final String s1 = parseString(s);
+    return unescape? StringEscapeUtils.unescapeJava(s1) : s1;
   }
 
   /**

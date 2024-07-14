@@ -550,6 +550,11 @@ public abstract class SqlAbstractParserImpl {
   }
 
   /**
+   * Sets the unescaped policy for sql literal.
+   */
+  public abstract void setLiteralUnescape(boolean unescape);
+
+  /**
    * Sets the SQL language conformance level.
    */
   public abstract void setConformance(SqlConformance conformance);

@@ -166,6 +166,7 @@ public class ${parser.class} extends SqlAbstractParserImpl
     private Casing unquotedCasing;
     private Casing quotedCasing;
     private int identifierMaxLength;
+    private boolean literalUnescape;
     private SqlConformance conformance;
 
     /**
@@ -225,6 +226,10 @@ public class ${parser.class} extends SqlAbstractParserImpl
 
     public void setIdentifierMaxLength(int identifierMaxLength) {
         this.identifierMaxLength = identifierMaxLength;
+    }
+
+    public void setLiteralUnescape(boolean literalUnescape) {
+        this.literalUnescape = literalUnescape;
     }
 
     public void setConformance(SqlConformance conformance) {
@@ -4691,7 +4696,7 @@ SqlNode StringLiteral() :
     )
     {
         frags = new ArrayList<SqlLiteral>();
-        p = SqlParserUtil.parseString(token.image);
+        p = SqlParserUtil.parseString(token.image, literalUnescape);
         try {
             literal = SqlLiteral.createCharString(p, charSet, getPos());
             frags.add(literal);

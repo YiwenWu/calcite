@@ -75,6 +75,7 @@ public class SqlParser {
     parser.setIdentifierMaxLength(config.identifierMaxLength());
     parser.setTimeUnitCodes(config.timeUnitCodes());
     parser.setConformance(config.conformance());
+    parser.setLiteralUnescape(config.literalUnescape());
     parser.switchTo(SqlAbstractParserImpl.LexicalState.forConfig(config));
   }
 
@@ -266,6 +267,13 @@ public class SqlParser {
   public interface Config {
     /** Default configuration. */
     Config DEFAULT = ImmutableSqlParser.Config.of();
+
+    @Value.Default default boolean literalUnescape() {
+      return false;
+    }
+
+    /** Sets {@link #literalUnescape()}. */
+    Config withLiteralUnescape(boolean literalUnescape);
 
     @Value.Default default int identifierMaxLength() {
       return DEFAULT_IDENTIFIER_MAX_LENGTH;
